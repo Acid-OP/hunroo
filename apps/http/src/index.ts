@@ -9,7 +9,7 @@ import { prismaClient } from '@repo/db/client';
 dotenv.config();
 
 const app: Express = express();
-const PORT = parseInt(process.env.PORT || '3000', 10);
+const PORT = parseInt(process.env.PORT || '4000', 10);
 
 app.use(cors());
 app.use(express.json());
@@ -993,9 +993,63 @@ app.use((req: Request, res: Response) => {
   });
 });
 
+// Add this function before app.listen() in your index.ts
+
+// Auto-seed skills on server start
+const seedSkills = async () => {
+  try {
+    const skills = [
+      { skillName: 'Carpentry', requiresCertificate: true },
+      { skillName: 'Plumbing', requiresCertificate: true },
+      { skillName: 'Electrical Work', requiresCertificate: true },
+      { skillName: 'Welding', requiresCertificate: true },
+      { skillName: 'Driving', requiresCertificate: true },
+      { skillName: 'Security Guard', requiresCertificate: true },
+      { skillName: 'AC Repair', requiresCertificate: true },
+      { skillName: 'Painting', requiresCertificate: false },
+      { skillName: 'Masonry', requiresCertificate: false },
+      { skillName: 'Tailoring', requiresCertificate: false },
+      { skillName: 'Cooking', requiresCertificate: false },
+      { skillName: 'Cleaning', requiresCertificate: false },
+      { skillName: 'Gardening', requiresCertificate: false },
+      { skillName: 'Mobile Repair', requiresCertificate: false },
+      { skillName: 'House Keeping', requiresCertificate: false },
+      { skillName: 'Brick Laying', requiresCertificate: false },
+      { skillName: 'Tile Fitting', requiresCertificate: false },
+      { skillName: 'Construction Helper', requiresCertificate: false },
+      { skillName: 'Delivery Boy', requiresCertificate: false },
+      { skillName: 'Waiter', requiresCertificate: false },
+    ];
+
+    let count = 0;
+
+    for (const skill of skills) {
+      const existing = await prismaClient.skill.findUnique({
+        where: { skillName: skill.skillName },
+      });
+
+      if (!existing) {
+        await prismaClient.skill.create({ data: skill });
+        count++;
+      }
+    }
+
+    if (count > 0) {
+      console.log(`✅ Seeded ${count} new skills`);
+    } else {
+      console.log('✅ Skills already exist in database');
+    }
+  } catch (error) {
+    console.error('❌ Error seeding skills:', error);
+  }
+};
+
 // ========== Start Server ==========
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  
+  // Auto-seed skills on startup
+  await seedSkills();
 });
 
 export default app;

@@ -1,10 +1,8 @@
 'use client';
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../../store/authStore';
 import { api } from '../../../lib/axios';
-
 
 export default function SignupPage() {
   const router = useRouter();

@@ -1,5 +1,4 @@
 'use client';
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../../store/authStore';
@@ -29,7 +28,6 @@ export default function LoginPage() {
         const { token, user } = response.data.data;
         login(token, user);
         
-        // Redirect based on role
         if (user.role === 'JOB_SEEKER') {
           router.push('/applicant/profile');
         } else {
