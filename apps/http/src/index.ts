@@ -4,23 +4,23 @@ import bcrypt from 'bcrypt';
 import Jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import dotenv from 'dotenv';
+import { prismaClient } from '@repo/db/client';
 
 dotenv.config();
 
 const app: Express = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
-const mockUsers: any[] = [];
-
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ========== Validation Schemas ==========
 const signupSchema = z.object({
   email: z.string().email('Invalid email format'),
   password: z.string().min(6, 'Password must be at least 6 characters').max(100, 'Password too long'),
-  role: z.enum(['job_seeker', 'job_provider'], {
-    message: 'Role must be either job_seeker or job_provider',
+  role: z.enum(['JOB_SEEKER', 'JOB_PROVIDER'], {
+    message: 'Role must be either JOB_SEEKER or JOB_PROVIDER',
   }),
 });
 
@@ -29,7 +29,45 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-// Validation middleware
+const applicantProfileSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  address: z.string().optional(),
+  phone: z.string().optional(),
+  education: z.string().optional(),
+  skills: z.array(z.object({
+    skillId: z.string(),
+    certificateUrl: z.string().optional(),
+  })).optional(),
+  employmentHistory: z.array(z.object({
+    companyName: z.string(),
+    duration: z.string(),
+    description: z.string().optional(),
+  })).optional(),
+  references: z.array(z.object({
+    name: z.string(),
+    contact: z.string(),
+    description: z.string().optional(),
+  })).optional(),
+});
+
+const employerProfileSchema = z.object({
+  companyName: z.string().min(1, 'Company name is required'),
+  companyDescription: z.string().optional(),
+  companyWebsite: z.string().optional(),
+  contactInfo: z.string().optional(),
+});
+
+const jobSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().min(1, 'Description is required'),
+  pay: z.number().positive('Pay must be positive'),
+  employmentType: z.enum(['PER_DAY', 'PER_PROJECT']),
+  location: z.string().min(1, 'Location is required'),
+  duration: z.string().optional(),
+  requiredSkills: z.array(z.string()).optional(),
+});
+
+// ========== Middleware ==========
 const validate = (schema: any) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -45,11 +83,43 @@ const validate = (schema: any) => {
   };
 };
 
-app.post('/api/auth/signup', validate(signupSchema), async (req: Request, res: Response) => {
+const authenticate = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'No token provided' });
+    }
+
+    const decoded = Jwt.verify(token, process.env.JWT_SECRET as string) as any;
+    (req as any).user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ success: false, message: 'Invalid token' });
+  }
+};
+
+const checkRole = (role: string) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if ((req as any).user.role !== role) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    next();
+  };
+};
+
+// ========== Auth Routes ==========
+app.get('/health', (req: Request, res: Response) => {
+  res.json({ status: 'OK', message: 'Server is running' });
+});
+
+app.post('/signup', validate(signupSchema), async (req: Request, res: Response) => {
   try {
     const { email, password, role } = req.body;
 
-    const existingUser = mockUsers.find((u) => u.email === email);
+    const existingUser = await prismaClient.user.findUnique({
+      where: { email },
+    });
+
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -59,15 +129,13 @@ app.post('/api/auth/signup', validate(signupSchema), async (req: Request, res: R
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = {
-      id: `user_${Date.now()}`,
-      email,
-      password: hashedPassword,
-      role,
-      createdAt: new Date().toISOString(),
-    };
-
-    mockUsers.push(newUser);
+    const newUser = await prismaClient.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        role,
+      },
+    });
 
     const token = Jwt.sign(
       { userId: newUser.id, email: newUser.email, role: newUser.role },
@@ -89,11 +157,14 @@ app.post('/api/auth/signup', validate(signupSchema), async (req: Request, res: R
   }
 });
 
-app.post('/api/auth/login', validate(loginSchema), async (req: Request, res: Response) => {
+app.post('/login', validate(loginSchema), async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    const user = mockUsers.find((u) => u.email === email);
+    const user = await prismaClient.user.findUnique({
+      where: { email },
+    });
+
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -129,6 +200,641 @@ app.post('/api/auth/login', validate(loginSchema), async (req: Request, res: Res
   }
 });
 
+// ========== Applicant Routes ==========
+
+// Create applicant profile
+app.post('/api/applicant/profile', authenticate, checkRole('JOB_SEEKER'), validate(applicantProfileSchema), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { name, address, phone, education, skills, employmentHistory, references } = req.body;
+
+    const existingProfile = await prismaClient.jobSeekerProfile.findUnique({
+      where: { userId },
+    });
+
+    if (existingProfile) {
+      return res.status(400).json({ success: false, message: 'Profile already exists' });
+    }
+
+    const newProfile = await prismaClient.jobSeekerProfile.create({
+      data: {
+        userId,
+        name,
+        address,
+        phone,
+        education,
+        skills: {
+          create: skills?.map((skill: any) => ({
+            skillId: skill.skillId,
+            certificateUrl: skill.certificateUrl,
+          })) || [],
+        },
+        employmentHistory: {
+          create: employmentHistory?.map((emp: any) => ({
+            companyName: emp.companyName,
+            duration: emp.duration,
+            description: emp.description,
+          })) || [],
+        },
+        references: {
+          create: references?.map((ref: any) => ({
+            name: ref.name,
+            contact: ref.contact,
+            description: ref.description,
+          })) || [],
+        },
+      },
+      include: {
+        skills: { include: { skill: true } },
+        employmentHistory: true,
+        references: true,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Profile created successfully',
+      data: newProfile,
+    });
+  } catch (error) {
+    console.error('Create profile error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Get applicant profile
+app.get('/api/applicant/profile', authenticate, checkRole('JOB_SEEKER'), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    
+    const profile = await prismaClient.jobSeekerProfile.findUnique({
+      where: { userId },
+      include: {
+        skills: { include: { skill: true } },
+        employmentHistory: true,
+        references: true,
+      },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
+    res.json({ success: true, data: profile });
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Update applicant profile
+app.put('/api/applicant/profile', authenticate, checkRole('JOB_SEEKER'), validate(applicantProfileSchema), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { name, address, phone, education, skills, employmentHistory, references } = req.body;
+
+    const existingProfile = await prismaClient.jobSeekerProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!existingProfile) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
+    // Delete existing relations
+    await prismaClient.userSkill.deleteMany({ where: { jobSeekerProfileId: existingProfile.id } });
+    await prismaClient.employmentHistory.deleteMany({ where: { jobSeekerProfileId: existingProfile.id } });
+    await prismaClient.reference.deleteMany({ where: { jobSeekerProfileId: existingProfile.id } });
+
+    // Update profile with new data
+    const updatedProfile = await prismaClient.jobSeekerProfile.update({
+      where: { userId },
+      data: {
+        name,
+        address,
+        phone,
+        education,
+        skills: {
+          create: skills?.map((skill: any) => ({
+            skillId: skill.skillId,
+            certificateUrl: skill.certificateUrl,
+          })) || [],
+        },
+        employmentHistory: {
+          create: employmentHistory?.map((emp: any) => ({
+            companyName: emp.companyName,
+            duration: emp.duration,
+            description: emp.description,
+          })) || [],
+        },
+        references: {
+          create: references?.map((ref: any) => ({
+            name: ref.name,
+            contact: ref.contact,
+            description: ref.description,
+          })) || [],
+        },
+      },
+      include: {
+        skills: { include: { skill: true } },
+        employmentHistory: true,
+        references: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: updatedProfile,
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Delete applicant profile
+app.delete('/api/applicant/profile', authenticate, checkRole('JOB_SEEKER'), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+
+    const profile = await prismaClient.jobSeekerProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
+    await prismaClient.jobSeekerProfile.delete({
+      where: { userId },
+    });
+
+    res.json({ success: true, message: 'Profile deleted successfully' });
+  } catch (error) {
+    console.error('Delete profile error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Get all my applications
+app.get('/api/applicant/applications', authenticate, checkRole('JOB_SEEKER'), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+
+    const profile = await prismaClient.jobSeekerProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
+    const applications = await prismaClient.application.findMany({
+      where: { jobSeekerProfileId: profile.id },
+      include: {
+        job: {
+          include: {
+            jobProviderProfile: true,
+          },
+        },
+      },
+    });
+
+    res.json({ success: true, data: applications });
+  } catch (error) {
+    console.error('Get applications error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Apply to a job
+app.post('/api/applications', authenticate, checkRole('JOB_SEEKER'), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { jobId } = req.body;
+
+    const profile = await prismaClient.jobSeekerProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Profile not found. Create profile first.' });
+    }
+
+    const job = await prismaClient.job.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    }
+
+    if (job.status !== 'OPEN') {
+      return res.status(400).json({ success: false, message: 'Job is not open for applications' });
+    }
+
+    const existingApplication = await prismaClient.application.findUnique({
+      where: {
+        jobId_jobSeekerProfileId: {
+          jobId,
+          jobSeekerProfileId: profile.id,
+        },
+      },
+    });
+
+    if (existingApplication) {
+      return res.status(400).json({ success: false, message: 'Already applied to this job' });
+    }
+
+    const newApplication = await prismaClient.application.create({
+      data: {
+        jobId,
+        jobSeekerProfileId: profile.id,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Application submitted successfully',
+      data: newApplication,
+    });
+  } catch (error) {
+    console.error('Apply error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Withdraw application
+app.delete('/api/applications/:id', authenticate, checkRole('JOB_SEEKER'), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { id } = req.params;
+
+    const profile = await prismaClient.jobSeekerProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
+    const application = await prismaClient.application.findUnique({
+      where: { id },
+    });
+
+    if (!application || application.jobSeekerProfileId !== profile.id) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    await prismaClient.application.delete({
+      where: { id },
+    });
+
+    res.json({ success: true, message: 'Application withdrawn successfully' });
+  } catch (error) {
+    console.error('Withdraw error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// ========== Employer Routes ==========
+
+// Create employer profile
+app.post('/api/employer/profile', authenticate, checkRole('JOB_PROVIDER'), validate(employerProfileSchema), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { companyName, companyDescription, companyWebsite, contactInfo } = req.body;
+
+    const existingProfile = await prismaClient.jobProviderProfile.findUnique({
+      where: { userId },
+    });
+
+    if (existingProfile) {
+      return res.status(400).json({ success: false, message: 'Profile already exists' });
+    }
+
+    const newProfile = await prismaClient.jobProviderProfile.create({
+      data: {
+        userId,
+        companyName,
+        companyDescription,
+        companyWebsite,
+        contactInfo,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Employer profile created successfully',
+      data: newProfile,
+    });
+  } catch (error) {
+    console.error('Create employer profile error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Get employer profile
+app.get('/api/employer/profile', authenticate, checkRole('JOB_PROVIDER'), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+
+    const profile = await prismaClient.jobProviderProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
+    res.json({ success: true, data: profile });
+  } catch (error) {
+    console.error('Get employer profile error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Update employer profile
+app.put('/api/employer/profile', authenticate, checkRole('JOB_PROVIDER'), validate(employerProfileSchema), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { companyName, companyDescription, companyWebsite, contactInfo } = req.body;
+
+    const existingProfile = await prismaClient.jobProviderProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!existingProfile) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
+    const updatedProfile = await prismaClient.jobProviderProfile.update({
+      where: { userId },
+      data: {
+        companyName,
+        companyDescription,
+        companyWebsite,
+        contactInfo,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: updatedProfile,
+    });
+  } catch (error) {
+    console.error('Update employer profile error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Delete employer profile
+app.delete('/api/employer/profile', authenticate, checkRole('JOB_PROVIDER'), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+
+    const profile = await prismaClient.jobProviderProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
+    await prismaClient.jobProviderProfile.delete({
+      where: { userId },
+    });
+
+    res.json({ success: true, message: 'Profile deleted successfully' });
+  } catch (error) {
+    console.error('Delete employer profile error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Create job
+app.post('/api/employer/jobs', authenticate, checkRole('JOB_PROVIDER'), validate(jobSchema), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { title, description, pay, employmentType, location, duration, requiredSkills } = req.body;
+
+    const profile = await prismaClient.jobProviderProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Employer profile not found. Create profile first.' });
+    }
+
+    const newJob = await prismaClient.job.create({
+      data: {
+        jobProviderProfileId: profile.id,
+        title,
+        description,
+        pay,
+        employmentType,
+        location,
+        duration,
+        requiredSkills: {
+          create: requiredSkills?.map((skillId: string) => ({
+            skillId,
+          })) || [],
+        },
+      },
+      include: {
+        requiredSkills: {
+          include: {
+            skill: true,
+          },
+        },
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Job created successfully',
+      data: newJob,
+    });
+  } catch (error) {
+    console.error('Create job error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Get all my jobs
+app.get('/api/employer/jobs', authenticate, checkRole('JOB_PROVIDER'), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+
+    const profile = await prismaClient.jobProviderProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
+    const jobs = await prismaClient.job.findMany({
+      where: { jobProviderProfileId: profile.id },
+      include: {
+        requiredSkills: {
+          include: {
+            skill: true,
+          },
+        },
+      },
+    });
+
+    res.json({ success: true, data: jobs });
+  } catch (error) {
+    console.error('Get jobs error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Update job
+app.put('/api/employer/jobs/:id', authenticate, checkRole('JOB_PROVIDER'), validate(jobSchema), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { id } = req.params;
+    const { title, description, pay, employmentType, location, duration, requiredSkills } = req.body;
+
+    const profile = await prismaClient.jobProviderProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
+    const job = await prismaClient.job.findUnique({
+      where: { id },
+    });
+
+    if (!job || job.jobProviderProfileId !== profile.id) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    }
+
+    // Delete existing required skills
+    await prismaClient.jobSkill.deleteMany({ where: { jobId: id } });
+
+    const updatedJob = await prismaClient.job.update({
+      where: { id },
+      data: {
+        title,
+        description,
+        pay,
+        employmentType,
+        location,
+        duration,
+        requiredSkills: {
+          create: requiredSkills?.map((skillId: string) => ({
+            skillId,
+          })) || [],
+        },
+      },
+      include: {
+        requiredSkills: {
+          include: {
+            skill: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Job updated successfully',
+      data: updatedJob,
+    });
+  } catch (error) {
+    console.error('Update job error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Delete job
+app.delete('/api/employer/jobs/:id', authenticate, checkRole('JOB_PROVIDER'), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { id } = req.params;
+
+    const profile = await prismaClient.jobProviderProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
+    const job = await prismaClient.job.findUnique({
+      where: { id },
+    });
+
+    if (!job || job.jobProviderProfileId !== profile.id) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    }
+
+    await prismaClient.job.delete({
+      where: { id },
+    });
+
+    res.json({ success: true, message: 'Job deleted successfully' });
+  } catch (error) {
+    console.error('Delete job error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Get all applicants for a job
+app.get('/api/employer/jobs/:id/applicants', authenticate, checkRole('JOB_PROVIDER'), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { id } = req.params;
+
+    const profile = await prismaClient.jobProviderProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
+    const job = await prismaClient.job.findUnique({
+      where: { id },
+    });
+
+    if (!job || job.jobProviderProfileId !== profile.id) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    }
+
+    const applications = await prismaClient.application.findMany({
+      where: { jobId: id },
+      include: {
+        jobSeekerProfile: {
+          include: {
+            skills: {
+              include: {
+                skill: true,
+              },
+            },
+            employmentHistory: true,
+            references: true,
+          },
+        },
+      },
+    });
+
+    res.json({ success: true, data: applications });
+  } catch (error) {
+    console.error('Get applicants error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// ========== 404 Handler ==========
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
@@ -136,6 +842,7 @@ app.use((req: Request, res: Response) => {
   });
 });
 
+// ========== Start Server ==========
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });
