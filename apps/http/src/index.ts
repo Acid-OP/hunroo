@@ -834,6 +834,157 @@ app.get('/api/employer/jobs/:id/applicants', authenticate, checkRole('JOB_PROVID
   }
 });
 
+// ========== Common Routes ==========
+
+// Get all available jobs (Job Feed)
+app.get('/api/jobs', async (req: Request, res: Response) => {
+  try {
+    const { pay_min, pay_max, location, employmentType, skills, sort } = req.query;
+
+    let whereClause: any = {
+      status: 'OPEN',
+    };
+
+    // Filter by pay range
+    if (pay_min || pay_max) {
+      whereClause.pay = {};
+      if (pay_min) whereClause.pay.gte = parseFloat(pay_min as string);
+      if (pay_max) whereClause.pay.lte = parseFloat(pay_max as string);
+    }
+
+    // Filter by location
+    if (location) {
+      whereClause.location = {
+        contains: location as string,
+        mode: 'insensitive',
+      };
+    }
+
+    // Filter by employment type
+    if (employmentType) {
+      whereClause.employmentType = employmentType;
+    }
+
+    // Filter by skills
+    if (skills) {
+      const skillIds = (skills as string).split(',');
+      whereClause.requiredSkills = {
+        some: {
+          skillId: {
+            in: skillIds,
+          },
+        },
+      };
+    }
+
+    // Sorting
+    let orderBy: any = { createdAt: 'desc' }; // Default: recent first
+    if (sort === 'pay_asc') orderBy = { pay: 'asc' };
+    if (sort === 'pay_desc') orderBy = { pay: 'desc' };
+
+    const jobs = await prismaClient.job.findMany({
+      where: whereClause,
+      orderBy,
+      include: {
+        jobProviderProfile: {
+          select: {
+            companyName: true,
+            companyDescription: true,
+          },
+        },
+        requiredSkills: {
+          include: {
+            skill: true,
+          },
+        },
+      },
+    });
+
+    res.json({ success: true, data: jobs });
+  } catch (error) {
+    console.error('Get jobs error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Get single job details
+app.get('/api/jobs/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const job = await prismaClient.job.findUnique({
+      where: { id },
+      include: {
+        jobProviderProfile: {
+          select: {
+            companyName: true,
+            companyDescription: true,
+            companyWebsite: true,
+            contactInfo: true,
+          },
+        },
+        requiredSkills: {
+          include: {
+            skill: true,
+          },
+        },
+      },
+    });
+
+    if (!job) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    }
+
+    res.json({ success: true, data: job });
+  } catch (error) {
+    console.error('Get job error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Get all available skills
+app.get('/api/skills', async (req: Request, res: Response) => {
+  try {
+    const skills = await prismaClient.skill.findMany({
+      orderBy: { skillName: 'asc' },
+    });
+
+    res.json({ success: true, data: skills });
+  } catch (error) {
+    console.error('Get skills error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Get applicant public profile (for employer to view)
+app.get('/api/applicant/:id', authenticate, checkRole('JOB_PROVIDER'), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const profile = await prismaClient.jobSeekerProfile.findUnique({
+      where: { id },
+      include: {
+        skills: {
+          include: {
+            skill: true,
+          },
+        },
+        employmentHistory: true,
+        references: true,
+      },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
+    res.json({ success: true, data: profile });
+  } catch (error) {
+    console.error('Get applicant profile error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
 // ========== 404 Handler ==========
 app.use((req: Request, res: Response) => {
   res.status(404).json({
