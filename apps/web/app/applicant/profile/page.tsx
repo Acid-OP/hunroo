@@ -360,9 +360,9 @@ export default function ApplicantProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Header */}
-      <div className="bg-white border-b">
+      <nav className="bg-white border-b sticky top-0 z-50 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
@@ -371,36 +371,36 @@ export default function ApplicantProfilePage() {
           <div className="flex gap-2">
             <button
               onClick={() => router.push('/applicant/applications')}
-              className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition"
+              className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-full transition"
             >
               My Applications
             </button>
             <button
               onClick={() => router.push('/feed')}
-              className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition"
+              className="px-6 py-2 text-sm bg-black text-white rounded-full hover:bg-gray-800 transition"
             >
               Job Feed
             </button>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition flex items-center gap-2"
+              className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-full transition flex items-center gap-2"
             >
               <LogOut className="w-4 h-4" />
               Logout
             </button>
           </div>
         </div>
-      </div>
+      </nav>
 
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Messages */}
         {successMessage && (
-          <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md">
+          <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl shadow-sm">
             {successMessage}
           </div>
         )}
         {errorMessage && (
-          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl shadow-sm">
             {errorMessage}
           </div>
         )}
@@ -410,7 +410,7 @@ export default function ApplicantProfilePage() {
           <div className="mb-6 flex gap-3">
             <button
               onClick={() => setIsEditing(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+              className="px-6 py-3 bg-black text-white rounded-full hover:bg-gray-800 flex items-center gap-2 transition-all hover:scale-105 shadow-lg"
             >
               <Edit2 className="w-4 h-4" />
               Edit Profile
@@ -418,7 +418,7 @@ export default function ApplicantProfilePage() {
             <button
               onClick={handleDelete}
               disabled={saving}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2 disabled:bg-gray-400"
+              className="px-6 py-3 bg-white border-2 border-red-600 text-red-600 rounded-full hover:bg-red-50 flex items-center gap-2 disabled:bg-gray-100 disabled:border-gray-300 disabled:text-gray-400 transition-all hover:scale-105"
             >
               <Trash2 className="w-4 h-4" />
               Delete Profile
@@ -427,8 +427,8 @@ export default function ApplicantProfilePage() {
         )}
 
         {/* Basic Information */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6 hover:shadow-lg transition-shadow">
+          <h2 className="text-2xl font-bold mb-6 text-gray-900">Basic Information</h2>
           
           <div className="space-y-4">
             <div>
@@ -440,7 +440,7 @@ export default function ApplicantProfilePage() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 disabled={!isEditing}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-700 transition"
                 placeholder="Enter your full name"
               />
             </div>
@@ -454,7 +454,7 @@ export default function ApplicantProfilePage() {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 disabled={!isEditing}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-700 transition"
                 placeholder="+91 XXXXX XXXXX"
               />
             </div>
@@ -468,7 +468,7 @@ export default function ApplicantProfilePage() {
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 disabled={!isEditing}
                 rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-700 transition"
                 placeholder="Your full address"
               />
             </div>
@@ -482,7 +482,7 @@ export default function ApplicantProfilePage() {
                 onChange={(e) => setFormData({ ...formData, education: e.target.value })}
                 disabled={!isEditing}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-700 transition"
                 placeholder="Your educational background"
               />
             </div>
@@ -490,10 +490,12 @@ export default function ApplicantProfilePage() {
         </div>
 
         {/* Skills */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Award className="w-5 h-5 text-blue-600" />
-            <h2 className="text-xl font-semibold">Skills</h2>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+              <Award className="w-5 h-5 text-blue-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Skills</h2>
           </div>
 
           {isEditing && (
@@ -505,7 +507,7 @@ export default function ApplicantProfilePage() {
                     e.target.value = '';
                   }
                 }}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               >
                 <option value="">Select a skill to add...</option>
                 {availableSkills.map(skill => (
@@ -522,7 +524,7 @@ export default function ApplicantProfilePage() {
               <p className="text-gray-500 text-sm">No skills added yet</p>
             ) : (
               formData.skills.map((skill, index) => (
-                <div key={index} className="border border-gray-200 rounded-md p-4">
+                <div key={index} className="border border-gray-200 rounded-xl p-4 hover:border-blue-200 transition">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h3 className="font-medium text-gray-900">{skill.skillName}</h3>
@@ -549,7 +551,7 @@ export default function ApplicantProfilePage() {
                       value={skill.certificateUrl}
                       onChange={(e) => updateSkillCertificate(index, e.target.value)}
                       disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-sm"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-700 text-sm transition"
                       placeholder="https://example.com/certificate.pdf"
                     />
                   </div>
@@ -560,16 +562,18 @@ export default function ApplicantProfilePage() {
         </div>
 
         {/* Employment History */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-blue-600" />
-              <h2 className="text-xl font-semibold">Employment History</h2>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
+                <Briefcase className="w-5 h-5 text-purple-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900">Employment History</h2>
             </div>
             {isEditing && (
               <button
                 onClick={addEmployment}
-                className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-1 text-sm"
+                className="px-4 py-2 bg-black text-white rounded-full hover:bg-gray-800 flex items-center gap-1 text-sm transition-all hover:scale-105"
               >
                 <Plus className="w-4 h-4" />
                 Add
@@ -582,7 +586,7 @@ export default function ApplicantProfilePage() {
               <p className="text-gray-500 text-sm">No employment history added</p>
             ) : (
               formData.employmentHistory.map((emp, index) => (
-                <div key={index} className="border border-gray-200 rounded-md p-4">
+                <div key={index} className="border border-gray-200 rounded-xl p-4 hover:border-purple-200 transition">
                   <div className="flex justify-between items-start mb-3">
                     <h3 className="font-medium text-gray-900">Employment #{index + 1}</h3>
                     {isEditing && (
@@ -637,16 +641,18 @@ export default function ApplicantProfilePage() {
         </div>
 
         {/* References */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" />
-              <h2 className="text-xl font-semibold">References</h2>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
+                <Users className="w-5 h-5 text-green-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900">References</h2>
             </div>
             {isEditing && (
               <button
                 onClick={addReference}
-                className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-1 text-sm"
+                className="px-4 py-2 bg-black text-white rounded-full hover:bg-gray-800 flex items-center gap-1 text-sm transition-all hover:scale-105"
               >
                 <Plus className="w-4 h-4" />
                 Add
@@ -659,7 +665,7 @@ export default function ApplicantProfilePage() {
               <p className="text-gray-500 text-sm">No references added</p>
             ) : (
               formData.references.map((ref, index) => (
-                <div key={index} className="border border-gray-200 rounded-md p-4">
+                <div key={index} className="border border-gray-200 rounded-xl p-4 hover:border-green-200 transition">
                   <div className="flex justify-between items-start mb-3">
                     <h3 className="font-medium text-gray-900">Reference #{index + 1}</h3>
                     {isEditing && (
@@ -719,9 +725,9 @@ export default function ApplicantProfilePage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="px-8 py-4 bg-black text-white rounded-full hover:bg-gray-800 flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all hover:scale-105 shadow-lg font-semibold"
             >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
               {saving ? 'Saving...' : 'Save Profile'}
             </button>
             {profileExists && (
@@ -731,7 +737,7 @@ export default function ApplicantProfilePage() {
                   loadData();
                 }}
                 disabled={saving}
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:bg-gray-100"
+                className="px-8 py-4 bg-white border-2 border-gray-200 text-gray-700 rounded-full hover:border-gray-300 hover:bg-gray-50 disabled:bg-gray-100 transition-all hover:scale-105 font-semibold"
               >
                 Cancel
               </button>
