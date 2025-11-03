@@ -112,7 +112,7 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
-app.post('/signup', validate(signupSchema), async (req: Request, res: Response) => {
+app.post('/api/signup', validate(signupSchema), async (req: Request, res: Response) => {
   try {
     const { email, password, role } = req.body;
 
@@ -157,7 +157,7 @@ app.post('/signup', validate(signupSchema), async (req: Request, res: Response) 
   }
 });
 
-app.post('/login', validate(loginSchema), async (req: Request, res: Response) => {
+app.post('/api/login', validate(loginSchema), async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 

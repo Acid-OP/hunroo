@@ -23,7 +23,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await api.post('/login', formData);
+      const response = await api.post('/api/login', formData);
       
       if (response.data.success) {
         const { token, user } = response.data.data;
@@ -36,7 +36,9 @@ export default function LoginPage() {
         }
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
+      console.error('Login error:', err.response?.data);
+      const errorMsg = err.response?.data?.message || err.response?.data?.errors?.[0]?.message || 'Login failed';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -125,7 +127,7 @@ export default function LoginPage() {
 
         {/* Sign Up Link */}
         <p className="text-center text-sm text-gray-600 mt-6">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <button
             onClick={() => router.push('/signup')}
             className="text-blue-600 hover:text-blue-700 font-semibold hover:underline"

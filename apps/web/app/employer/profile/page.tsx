@@ -63,9 +63,11 @@ export default function EmployerProfilePage() {
           setIsEditing(true);
         }
       } catch (err: any) {
+        // 404 is expected for new users - silently handle it
         if (err.response?.status === 404) {
           setIsEditing(true);
         } else {
+          console.error('Error loading profile:', err);
           throw err;
         }
       }

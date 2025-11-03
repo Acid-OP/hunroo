@@ -24,7 +24,7 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const response = await api.post('/signup', formData);
+      const response = await api.post('/api/signup', formData);
       
       if (response.data.success) {
         const { token, user } = response.data.data;
@@ -38,7 +38,9 @@ export default function SignupPage() {
         }
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Signup failed');
+      console.error('Signup error:', err.response?.data);
+      const errorMsg = err.response?.data?.message || err.response?.data?.errors?.[0]?.message || 'Signup failed';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

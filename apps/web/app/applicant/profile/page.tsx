@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, Plus, X, Briefcase, Award, Users, Save, Edit2, Trash2, Loader2, LogOut } from 'lucide-react';
+import { Plus, X, Briefcase, Award, Users, Save, Edit2, Trash2, Loader2, LogOut } from 'lucide-react';
 import { api } from '../../../lib/axios';
 import { useAuthStore } from '../../../store/authStore';
 
@@ -100,6 +100,7 @@ export default function ApplicantProfilePage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadData = async (): Promise<void> => {
@@ -144,9 +145,11 @@ export default function ApplicantProfilePage() {
           setIsEditing(true);
         }
       } catch (err: any) {
+        // 404 is expected for new users - silently handle it
         if (err.response?.status === 404) {
           setIsEditing(true);
         } else {
+          console.error('Error loading profile:', err);
           throw err;
         }
       }

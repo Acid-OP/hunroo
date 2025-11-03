@@ -64,6 +64,7 @@ export default function EmployerJobsPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadData = async (): Promise<void> => {
@@ -82,9 +83,10 @@ export default function EmployerJobsPage() {
         setJobs(jobsRes.data.data);
       }
     } catch (error: any) {
+      // 404 is expected if user hasn't created profile yet
       if (error.response?.status === 404) {
-        setErrorMessage('Please create an employer profile first');
-        setTimeout(() => router.push('/employer/profile'), 2000);
+        setJobs([]); // Just show empty state
+        setErrorMessage('Please create your employer profile first to post jobs');
       } else {
         setErrorMessage('Failed to load data');
         console.error('Load error:', error);

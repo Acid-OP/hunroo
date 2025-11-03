@@ -16,8 +16,12 @@ export default function Home() {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isInitial, setIsInitial] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    // Fix hydration mismatch by waiting for client mount
+    setIsMounted(true);
+    
     // Remove initial state after first render
     const initialTimer = setTimeout(() => {
       setIsInitial(false);
@@ -31,6 +35,7 @@ export default function Home() {
       clearTimeout(initialTimer);
       clearInterval(interval);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Check authentication and redirect to feed
@@ -66,7 +71,20 @@ export default function Home() {
           Hunaroo India
         </button>
         <div className="flex items-center gap-4">
-          {isAuthenticated ? (
+          {!isMounted ? (
+            <>
+              <button 
+                className="text-gray-700 px-6 py-2 rounded-full hover:bg-gray-100 transition-all"
+              >
+                Sign In
+              </button>
+              <button 
+                className="bg-black text-white px-6 py-3 rounded-full hover:bg-gray-800 transition-all hover:scale-105 shadow-lg"
+              >
+                Get Started
+              </button>
+            </>
+          ) : isAuthenticated ? (
             <>
               <button 
                 onClick={handleGoToFeed}
@@ -151,7 +169,7 @@ export default function Home() {
             </h1>
 
             <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              India's premier platform for skilled workers and employers.
+              India&apos;s premier platform for skilled workers and employers.
               <br />
               From carpentry to driving, find the right talent or the perfect job.
             </p>
@@ -163,13 +181,13 @@ export default function Home() {
                 className="group bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800 transition-all hover:scale-105 shadow-lg flex items-center gap-2 font-semibold"
               >
                 <Briefcase className="w-5 h-5" />
-                {isAuthenticated ? 'Go to Dashboard' : 'Get Started'}
+                {isMounted && isAuthenticated ? 'Go to Dashboard' : 'Get Started'}
               </button>
               <button 
                 onClick={handleGoToFeed}
                 className="bg-white text-gray-900 px-8 py-3 rounded-full border-2 border-gray-200 hover:border-gray-300 transition-all hover:scale-105 shadow-sm font-semibold"
               >
-                {isAuthenticated ? 'Browse Jobs' : 'View Jobs'}
+                {isMounted && isAuthenticated ? 'Browse Jobs' : 'View Jobs'}
               </button>
             </div>
           </div>

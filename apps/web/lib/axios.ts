@@ -12,3 +12,20 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Suppress console errors for expected 404s
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Don't log 404 errors for profile endpoints (expected for new users)
+    const is404 = error.response?.status === 404;
+    const isProfileEndpoint = error.config?.url?.includes('/profile') || 
+                               error.config?.url?.includes('/applications');
+    
+    if (!(is404 && isProfileEndpoint)) {
+      console.error('API Error:', error.response?.data || error.message);
+    }
+    
+    return Promise.reject(error);
+  }
+);

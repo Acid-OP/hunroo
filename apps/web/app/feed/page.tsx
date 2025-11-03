@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, DollarSign, Briefcase, Building2, Filter, X, ChevronDown, LogOut, User } from 'lucide-react';
+import { MapPin, DollarSign, Briefcase, Building2, Filter, ChevronDown, LogOut, User } from 'lucide-react';
 import { api } from '../../lib/axios';
 import { useAuthStore } from '../../store/authStore';
 
@@ -68,6 +68,7 @@ export default function JobFeedPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadData = async () => {
@@ -91,9 +92,9 @@ export default function JobFeedPage() {
             const jobIds = new Set(appsRes.data.data.map(app => app.jobId));
             setAppliedJobs(jobIds);
           }
-        } catch (err) {
-          // User might not have a profile yet
-        }
+      } catch {
+        // User might not have a profile yet
+      }
       }
     } catch (error: any) {
       setErrorMessage('Failed to load jobs');
