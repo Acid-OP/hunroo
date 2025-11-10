@@ -62,7 +62,7 @@ export default function MyApplicationsPage() {
       const response = await api.get<{ success: boolean; data: Application[] }>('/api/applicant/applications');
       
       if (response.data.success) {
-        setApplications(response.data.data);
+        setApplications(Array.isArray(response.data.data) ? response.data.data : []);
       }
     } catch (error: any) {
       // 404 is expected if user hasn't created profile yet
@@ -188,7 +188,7 @@ export default function MyApplicationsPage() {
                         <Building2 className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-900">{app.job.jobProviderProfile.companyName}</h4>
+                        <h4 className="font-semibold text-gray-900">{app.job?.jobProviderProfile?.companyName || 'Unknown Company'}</h4>
                         <p className="text-xs text-gray-500">
                           Applied {new Date(app.appliedAt).toLocaleDateString()}
                         </p>
@@ -196,20 +196,20 @@ export default function MyApplicationsPage() {
                     </div>
 
                     {/* Job Title */}
-                    <h3 className="text-xl font-bold text-gray-900 mb-3">{app.job.title}</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-3">{app.job?.title || 'Untitled Job'}</h3>
 
                     {/* Job Details */}
                     <div className="flex flex-wrap gap-3 mb-3">
                       <div className="flex items-center gap-1 text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded-full">
                         <DollarSign className="w-4 h-4 text-green-600" />
-                        <span className="font-semibold">₹{app.job.pay.toLocaleString()}</span>
-                        <span className="text-xs">/{app.job.employmentType === 'PER_DAY' ? 'day' : 'project'}</span>
+                        <span className="font-semibold">₹{app.job?.pay?.toLocaleString() || '0'}</span>
+                        <span className="text-xs">/{app.job?.employmentType === 'PER_DAY' ? 'day' : 'project'}</span>
                       </div>
                       <div className="flex items-center gap-1 text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded-full">
                         <MapPin className="w-4 h-4 text-red-600" />
-                        {app.job.location}
+                        {app.job?.location || 'Unknown Location'}
                       </div>
-                      {app.job.duration && (
+                      {app.job?.duration && (
                         <div className="flex items-center gap-1 text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded-full">
                           <Briefcase className="w-4 h-4 text-blue-600" />
                           {app.job.duration}
@@ -218,14 +218,14 @@ export default function MyApplicationsPage() {
                     </div>
 
                     {/* Skills */}
-                    {app.job.requiredSkills.length > 0 && (
+                    {app.job?.requiredSkills && Array.isArray(app.job.requiredSkills) && app.job.requiredSkills.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-3">
                         {app.job.requiredSkills.map(skill => (
                           <span
                             key={skill.id}
                             className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium"
                           >
-                            {skill.skill.skillName}
+                            {skill?.skill?.skillName || 'Unknown Skill'}
                           </span>
                         ))}
                       </div>
@@ -234,12 +234,12 @@ export default function MyApplicationsPage() {
                     {/* Status */}
                     <span
                       className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                        app.job.status === 'OPEN'
+                        app.job?.status === 'OPEN'
                           ? 'bg-green-50 text-green-700'
                           : 'bg-gray-50 text-gray-700'
                       }`}
                     >
-                      {app.job.status}
+                      {app.job?.status || 'UNKNOWN'}
                     </span>
                   </div>
 

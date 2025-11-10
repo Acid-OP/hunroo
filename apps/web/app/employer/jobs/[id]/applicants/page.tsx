@@ -165,14 +165,14 @@ export default function JobApplicantsPage() {
                       </div>
 
                       {/* Skills Preview */}
-                      {app.jobSeekerProfile.skills.length > 0 && (
+                      {app.jobSeekerProfile?.skills && Array.isArray(app.jobSeekerProfile.skills) && app.jobSeekerProfile.skills.length > 0 && (
                         <div className="flex flex-wrap gap-2">
                           {app.jobSeekerProfile.skills.slice(0, 3).map(skill => (
                             <span
                               key={skill.id}
                               className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium"
                             >
-                              {skill.skill.skillName}
+                              {skill?.skill?.skillName || 'Unknown Skill'}
                             </span>
                           ))}
                           {app.jobSeekerProfile.skills.length > 3 && (
@@ -220,7 +220,7 @@ export default function JobApplicantsPage() {
                     </div>
 
                     {/* All Skills */}
-                    {app.jobSeekerProfile.skills.length > 0 && (
+                    {app.jobSeekerProfile?.skills && Array.isArray(app.jobSeekerProfile.skills) && app.jobSeekerProfile.skills.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-3">
                           <Award className="w-5 h-5 text-blue-600" />
@@ -230,7 +230,7 @@ export default function JobApplicantsPage() {
                           {app.jobSeekerProfile.skills.map(skill => (
                             <div key={skill.id} className="bg-white p-3 rounded-xl border border-gray-200">
                               <div className="flex justify-between items-center">
-                                <span className="font-medium text-gray-900">{skill.skill.skillName}</span>
+                                <span className="font-medium text-gray-900">{skill?.skill?.skillName || 'Unknown Skill'}</span>
                                 {skill.certificateUrl && (
                                   <a
                                     href={skill.certificateUrl}

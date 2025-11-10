@@ -6,9 +6,13 @@ export const api = axios.create({
 
 // Add token to requests automatically
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  try {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch (error) {
+    console.error('Failed to read token from localStorage:', error);
   }
   return config;
 });
@@ -23,7 +27,26 @@ api.interceptors.response.use(
                                error.config?.url?.includes('/applications');
     
     if (!(is404 && isProfileEndpoint)) {
-      console.error('API Error:', error.response?.data || error.message);
+      // Provide detailed error information for debugging
+      if (error.response) {
+        // Server responded with an error status
+        console.error('API Error:', {
+          status: error.response.status,
+          data: error.response.data,
+          url: error.config?.url,
+        });
+      } else if (error.request) {
+        // Request was made but no response received (network error, server down, etc.)
+        console.error('Network Error: No response from server', {
+          message: error.message,
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+        });
+        console.error('Is the backend server running at', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000', '?');
+      } else {
+        // Something else happened
+        console.error('Request Error:', error.message);
+      }
     }
     
     return Promise.reject(error);

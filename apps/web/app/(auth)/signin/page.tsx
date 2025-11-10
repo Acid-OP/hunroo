@@ -17,9 +17,34 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const validateForm = () => {
+    if (!formData.email.trim()) {
+      setError('Email is required');
+      return false;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+    
+    if (!formData.password) {
+      setError('Password is required');
+      return false;
+    }
+    
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    if (!validateForm()) {
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -37,7 +62,23 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       console.error('Login error:', err.response?.data);
-      const errorMsg = err.response?.data?.message || err.response?.data?.errors?.[0]?.message || 'Login failed';
+      
+      // Better error handling for different error scenarios
+      let errorMsg = 'Login failed';
+      
+      if (err.response) {
+        // Server responded with an error
+        errorMsg = err.response.data?.message || 
+                   err.response.data?.errors?.[0]?.message || 
+                   `Server error: ${err.response.status}`;
+      } else if (err.request) {
+        // Request was made but no response (network error, server down)
+        errorMsg = 'Cannot connect to server. Please make sure the backend is running.';
+      } else {
+        // Something else happened
+        errorMsg = err.message || 'An unexpected error occurred';
+      }
+      
       setError(errorMsg);
     } finally {
       setLoading(false);
@@ -80,8 +121,9 @@ export default function LoginPage() {
                 <input
                   type="email"
                   required
+                  maxLength={255}
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value.trim() })}
                   className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                   placeholder="your@email.com"
                 />

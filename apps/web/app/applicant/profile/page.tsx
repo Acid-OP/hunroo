@@ -110,7 +110,7 @@ export default function ApplicantProfilePage() {
       // Load available skills
       const skillsRes = await api.get<{ success: boolean; data: Skill[] }>('/api/skills');
       if (skillsRes.data.success) {
-        setAvailableSkills(skillsRes.data.data);
+        setAvailableSkills(Array.isArray(skillsRes.data.data) ? skillsRes.data.data : []);
       }
 
       // Load existing profile
@@ -126,9 +126,9 @@ export default function ApplicantProfilePage() {
             education: profile.education || '',
             skills: profile.skills?.map(s => ({
               skillId: s.skillId,
-              skillName: s.skill.skillName,
+              skillName: s.skill?.skillName || 'Unknown',
               certificateUrl: s.certificateUrl || '',
-              requiresCertificate: s.skill.requiresCertificate
+              requiresCertificate: s.skill?.requiresCertificate || false
             })) || [],
             employmentHistory: profile.employmentHistory?.map(e => ({
               companyName: e.companyName,
@@ -171,11 +171,25 @@ export default function ApplicantProfilePage() {
         setErrorMessage('Name is required');
         return;
       }
+      
+      if (formData.name.length > 100) {
+        setErrorMessage('Name is too long (max 100 characters)');
+        return;
+      }
+      
+      if (formData.phone && !/^\+?[\d\s\-()]+$/.test(formData.phone)) {
+        setErrorMessage('Please enter a valid phone number');
+        return;
+      }
 
       // Validate required fields in arrays
       for (const skill of formData.skills) {
         if (skill.requiresCertificate && !skill.certificateUrl.trim()) {
           setErrorMessage(`Certificate required for ${skill.skillName}`);
+          return;
+        }
+        if (skill.certificateUrl && !skill.certificateUrl.startsWith('http')) {
+          setErrorMessage('Certificate URL must be a valid URL (starting with http:// or https://)');
           return;
         }
       }
@@ -185,11 +199,19 @@ export default function ApplicantProfilePage() {
           setErrorMessage('Company name and duration are required for all employment entries');
           return;
         }
+        if (emp.companyName.length > 100) {
+          setErrorMessage('Company name is too long (max 100 characters)');
+          return;
+        }
       }
 
       for (const ref of formData.references) {
         if (!ref.name.trim() || !ref.contact.trim()) {
           setErrorMessage('Name and contact are required for all references');
+          return;
+        }
+        if (ref.name.length > 100) {
+          setErrorMessage('Reference name is too long (max 100 characters)');
           return;
         }
       }

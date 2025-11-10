@@ -89,6 +89,16 @@ export default function EmployerProfilePage() {
         setErrorMessage('Company name is required');
         return;
       }
+      
+      if (formData.companyName.length > 200) {
+        setErrorMessage('Company name is too long (max 200 characters)');
+        return;
+      }
+      
+      if (formData.companyWebsite && !formData.companyWebsite.startsWith('http')) {
+        setErrorMessage('Company website must be a valid URL (starting with http:// or https://)');
+        return;
+      }
 
       const payload = {
         companyName: formData.companyName,

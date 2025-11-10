@@ -116,7 +116,7 @@ export default function JobFeedPage() {
 
       const jobsRes = await api.get<{ success: boolean; data: Job[] }>(`/api/jobs?${params.toString()}`);
       if (jobsRes.data.success) {
-        setJobs(jobsRes.data.data);
+        setJobs(Array.isArray(jobsRes.data.data) ? jobsRes.data.data : []);
       }
     } catch (error: any) {
       console.error('Load jobs error:', error);
@@ -428,7 +428,7 @@ export default function JobFeedPage() {
                       <Building2 className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-gray-900">{job.jobProviderProfile.companyName}</h4>
+                      <h4 className="font-semibold text-gray-900">{job.jobProviderProfile?.companyName || 'Unknown Company'}</h4>
                       <p className="text-xs text-gray-500">
                         Posted {new Date(job.createdAt).toLocaleDateString()}
                       </p>
@@ -463,14 +463,14 @@ export default function JobFeedPage() {
                   <p className="text-gray-700 mb-4 line-clamp-2">{job.description}</p>
 
                   {/* Skills */}
-                  {job.requiredSkills.length > 0 && (
+                  {job.requiredSkills && Array.isArray(job.requiredSkills) && job.requiredSkills.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-4">
                       {job.requiredSkills.slice(0, 3).map(skill => (
                         <span
                           key={skill.id}
                           className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium"
                         >
-                          {skill.skill.skillName}
+                          {skill?.skill?.skillName || 'Unknown Skill'}
                         </span>
                       ))}
                       {job.requiredSkills.length > 3 && (

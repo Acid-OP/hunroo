@@ -74,13 +74,13 @@ export default function EmployerJobsPage() {
       // Load available skills
       const skillsRes = await api.get<{ success: boolean; data: Skill[] }>('/api/skills');
       if (skillsRes.data.success) {
-        setAvailableSkills(skillsRes.data.data);
+        setAvailableSkills(Array.isArray(skillsRes.data.data) ? skillsRes.data.data : []);
       }
 
       // Load jobs
       const jobsRes = await api.get<{ success: boolean; data: Job[] }>('/api/employer/jobs');
       if (jobsRes.data.success) {
-        setJobs(jobsRes.data.data);
+        setJobs(Array.isArray(jobsRes.data.data) ? jobsRes.data.data : []);
       }
     } catch (error: any) {
       // 404 is expected if user hasn't created profile yet
@@ -102,15 +102,51 @@ export default function EmployerJobsPage() {
       setErrorMessage('');
       setSuccessMessage('');
 
-      if (!formData.title.trim() || !formData.description.trim() || !formData.pay || !formData.location.trim()) {
-        setErrorMessage('Please fill in all required fields');
+      if (!formData.title.trim()) {
+        setErrorMessage('Job title is required');
+        return;
+      }
+      
+      if (formData.title.length > 200) {
+        setErrorMessage('Job title is too long (max 200 characters)');
+        return;
+      }
+      
+      if (!formData.description.trim()) {
+        setErrorMessage('Job description is required');
+        return;
+      }
+      
+      if (!formData.pay) {
+        setErrorMessage('Pay/Salary is required');
+        return;
+      }
+      
+      const payNum = parseFloat(formData.pay);
+      if (isNaN(payNum) || payNum <= 0) {
+        setErrorMessage('Pay must be a positive number');
+        return;
+      }
+      
+      if (payNum > 10000000) {
+        setErrorMessage('Pay amount seems unrealistic');
+        return;
+      }
+      
+      if (!formData.location.trim()) {
+        setErrorMessage('Location is required');
+        return;
+      }
+      
+      if (formData.location.length > 200) {
+        setErrorMessage('Location is too long (max 200 characters)');
         return;
       }
 
       const payload = {
         title: formData.title,
         description: formData.description,
-        pay: parseFloat(formData.pay),
+        pay: payNum,
         employmentType: formData.employmentType,
         location: formData.location,
         duration: formData.duration || undefined,
@@ -434,14 +470,14 @@ export default function EmployerJobsPage() {
                     </div>
                     <p className="text-gray-700 mb-3">{job.description}</p>
                     
-                    {job.requiredSkills.length > 0 && (
+                    {job.requiredSkills && Array.isArray(job.requiredSkills) && job.requiredSkills.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-3">
                         {job.requiredSkills.map(skill => (
                           <span
                             key={skill.id}
                             className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium"
                           >
-                            {skill.skill.skillName}
+                            {skill?.skill?.skillName || 'Unknown Skill'}
                           </span>
                         ))}
                       </div>
